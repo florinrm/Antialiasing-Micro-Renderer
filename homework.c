@@ -4,6 +4,7 @@ int num_threads;
 int resize_factor;
 
 int gaussianMatrix[3][3] = {{1, 2, 1}, {2, 4, 2}, {1, 2, 1}};
+int gaussianMean = 16;
 
 pthread_t threads[8];
 int threads_id[8];
@@ -66,9 +67,10 @@ void writeData(const char * fileName, image *img) {
     free(img);
 }
 
+/*
 void *threadFunction(void *var) {
 
-}
+} */
 
 void resize(image *in, image * out) { 
     if (in == NULL)
