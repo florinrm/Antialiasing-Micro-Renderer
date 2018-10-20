@@ -6,6 +6,7 @@
 #include <math.h>
 
 #define MAXVAL 255
+#define BLACK 0
 
 typedef unsigned char pixel;
 
