@@ -31,6 +31,7 @@ int main(int argc, char * argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	resize(&input, &output);
 	clock_gettime(CLOCK_MONOTONIC, &finish);
+	//printf("me wanna fuck anky height %d width %d type %d\n", output.height, output.width, output.type);
 //DO NOT MODIFY THIS FILE
 	elapsed = (finish.tv_sec - start.tv_sec);
 	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;

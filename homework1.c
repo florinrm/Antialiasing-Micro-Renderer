@@ -5,6 +5,9 @@ int resolution;
 
 int max = 100;
 
+pthread_t threads[8];
+int threads_id[8];
+
 void initialize(image *im) {
     image *buff;
     buff = (image *) malloc (sizeof(image));
@@ -27,7 +30,7 @@ void initialize(image *im) {
 }
 
 void *threadFunction (void *var) {
-    
+    image img = *(image *) var;
 }
 
 void render(image *im) {
@@ -35,7 +38,7 @@ void render(image *im) {
     for (int i = 0; i < max; ++i) {
         for (int j = 0; j < max; ++j) {
             double distance = abs((-1) * i + 2 * j) / sqrt(1 + 4); // (-1) ^ 2 + 2 ^ 2
-            if (distance < 3) {
+            if (distance <= 3) {
                 for (int x = 0; x < resolution_scale; ++x) {
                     for (int y = 0; y < resolution_scale; ++y) {
                         im->matrix[x + resolution_scale * i][y + resolution_scale * j] = BLACK;
@@ -44,6 +47,10 @@ void render(image *im) {
             }
         }
     }
+
+    for (int i = 0; i < num_threads; ++i)
+        threads_id[i] = i;
+    
 }
 
 void writeData(const char * fileName, image *img) {

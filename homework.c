@@ -20,7 +20,7 @@ void readInput(const char * fileName, image *img) {
     buff = (image*) malloc (sizeof(image));
     char buffRead[2];
     fscanf(input, "%c %c", &buffRead[0], &buffRead[1]);
-    buff->type = buffRead[1] = '0';
+    buff->type = buffRead[1] - '0';
     fscanf(input, "%d %d", &buff->width, &buff->height);
     fscanf(input, "%d", &buff->max_size);
 
@@ -38,7 +38,6 @@ void readInput(const char * fileName, image *img) {
             fread(buff->gray_image[i], sizeof(gray), buff->width, input);
     }
 
-    printf("width height %d %d\n", buff->width, buff->height);
     *img = *buff;
 
     fclose(input);
@@ -53,14 +52,14 @@ void writeData(const char * fileName, image *img) {
     if (img->type == COLOR) {
         for (int i = 0; i < img->height; ++i) {
             for (int j = 0; j < img->width; ++j) {
-                fwrite(img->color_image[i][j].red, sizeof(unsigned char), 1, output);
-                fwrite(img->color_image[i][j].green, sizeof(unsigned char), 1, output);
-                fwrite(img->color_image[i][j].blue, sizeof(unsigned char), 1, output);
+                fwrite(&img->color_image[i][j].red, sizeof(unsigned char), 1, output);
+                fwrite(&img->color_image[i][j].green, sizeof(unsigned char), 1, output);
+                fwrite(&img->color_image[i][j].blue, sizeof(unsigned char), 1, output);
             }
         }
     } else if (img->type == GRAYSCALE) {
         for (int i = 0; i < img->height; ++i)
-            fwrite(img->gray_image[i], sizeof(gray), img->width, output);
+            fwrite(&img->gray_image[i], sizeof(gray), img->width, output);
     }
 
     fclose(output);
@@ -84,15 +83,23 @@ void *threadFunction(void *var) {
 void resize(image *in, image * out) { 
     if (in == NULL)
         return;
-    out = (image *) malloc (sizeof(image));
-    printf("width height type %d %d %d\n", in->width, in->height, in->type);
-    out->type = in->type;
-    out->height = in->height / resize_factor;
-    out->width = in->width / resize_factor;
-    printf("width height %d %d\n", out->width, out->height);
+    image *buff = (image *) malloc (sizeof(image));
+    buff->type = in->type;
+    buff->height = in->height / resize_factor;
+    buff->width = in->width / resize_factor;
+    buff->max_size = in->max_size;
+    if (buff->type == COLOR) {
+        buff->color_image = (rgb **) malloc (buff->height * sizeof(rgb *));
+        for (int i = 0; i < buff->height; ++i)
+            buff->color_image[i] = (rgb *) malloc (buff->width * sizeof(rgb));
+    } else if (buff->type == GRAYSCALE) {
+        buff->gray_image = (gray **) malloc (buff->height * sizeof(gray *));
+        for (int i = 0; i < buff->height; ++i)
+            buff->gray_image[i] = (gray *) malloc (buff->width * sizeof(gray));
+    }
 
-    for (int i = 0; i < out->height; ++i) {
-        for (int j = 0; j < out->width; ++j) {
+    for (int i = 0; i < buff->height; ++i) {
+        for (int j = 0; j < buff->width; ++j) {
             if (resize_factor % 2 == 0) {
 
                 int top_left_i = resize_factor * i;
@@ -103,6 +110,7 @@ void resize(image *in, image * out) {
                 unsigned int counter = 0;
                 
                 if (in->type == COLOR) {
+
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
                     for (int x = top_left_i; x < bottom_right_i; ++x) {
                         for (int y = top_left_j; y < bottom_right_j; ++y) {
@@ -110,51 +118,52 @@ void resize(image *in, image * out) {
                             sumBlue += in->color_image[x][y].blue;
                             sumGreen += in->color_image[x][y].green;
                             ++counter;
-                            printf("pula1\n");
                         }
                     }
-                    out->color_image[i][j].red = (unsigned char) (sumRed / counter);
-                    out->color_image[i][j].green = (unsigned char) (sumGreen / counter);
-                    out->color_image[i][j].blue = (unsigned char) (sumBlue / counter);
+                    buff->color_image[i][j].red = (unsigned char) (sumRed / counter);
+                    buff->color_image[i][j].green = (unsigned char) (sumGreen / counter);
+                    buff->color_image[i][j].blue = (unsigned char) (sumBlue / counter);
                 } else if (in->type == GRAYSCALE) {
+
                     unsigned int totalSum = 0;
                     for (int x = top_left_i; x < bottom_right_i; ++x) {
                         for (int y = top_left_j; y < bottom_right_j; ++y) {
                             totalSum += in->gray_image[x][y].gray;
                             ++counter;
-                            printf("pula2\n");
                         }
                     }
-                    out->gray_image[i][j].gray = (unsigned char) (totalSum / counter);
+                    buff->gray_image[i][j].gray = (unsigned char) (totalSum / counter);
                 }
 
-                //printf("%d\n", counter);
 
             } else if (resize_factor % 3 == 0) {
                 if (in->type == COLOR) {
+
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
                     for (int x = 0; x < 3; ++x) {
                         for (int y = 0; y < 3; ++y) {
                             sumRed += in->color_image[x + 3 * i][y + 3 * j].red * gaussianMatrix[x][y];
                             sumGreen += in->color_image[x + 3 * i][y + 3 * j].green * gaussianMatrix[x][y];
                             sumBlue += in->color_image[x + 3 * i][y + 3 * j].blue * gaussianMatrix[x][y];
-                            printf("pula3\n");
                         }
                     }
-                    out->color_image[i][j].red = (unsigned char) (sumRed / gaussianMean);
-                    out->color_image[i][j].green = (unsigned char) (sumGreen / gaussianMean);
-                    out->color_image[i][j].blue = (unsigned char) (sumBlue / gaussianMean);
+                    buff->color_image[i][j].red = (unsigned char) (sumRed / gaussianMean);
+                    buff->color_image[i][j].green = (unsigned char) (sumGreen / gaussianMean);
+                    buff->color_image[i][j].blue = (unsigned char) (sumBlue / gaussianMean);
+
                 } else if (in->type == GRAYSCALE) {
+
                     unsigned int totalSum = 0;
                     for (int x = 0; x < 3; ++x) {
                         for (int y = 0; y < 3; ++y) {
                             totalSum += in->gray_image[x + 3 * i][y + 3 * j].gray * gaussianMatrix[x][y];
-                            printf("pula4\n");
                         }
                     }
-                    out->gray_image[i][j].gray = (unsigned char) (totalSum / gaussianMean);
+                    buff->gray_image[i][j].gray = (unsigned char) (totalSum / gaussianMean);
                 }
             }
         }
     }
+    *out = *buff;
+    free(buff);
 }
