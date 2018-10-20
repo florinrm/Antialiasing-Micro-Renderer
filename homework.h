@@ -6,12 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define COLOR 5
-#define GRAYSCALE 6
+#define COLOR 6
+#define GRAYSCALE 5
 
 typedef struct {
     unsigned char red, green, blue;
-} rgb;
+} rgb; 
 
 typedef struct {
     unsigned char gray;
@@ -33,5 +33,6 @@ void readInput(const char * fileName, image *img);
 void writeData(const char * fileName, image *img);
 
 void resize(image *in, image * out);
+
 
 #endif /* HOMEWORK_H */

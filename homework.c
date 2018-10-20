@@ -3,11 +3,11 @@
 int num_threads;
 int resize_factor;
 
-int gaussianMatrix[3][3] = {{1, 2, 1}, {2, 4, 2}, {1, 2, 1}};
-int gaussianMean = 16;
+u_int gaussianMatrix[3][3] = {{1, 2, 1}, {2, 4, 2}, {1, 2, 1}}, gaussianMean = 16;
 
 pthread_t threads[8];
 int threads_id[8];
+
 
 void readInput(const char * fileName, image *img) {
     
@@ -21,19 +21,26 @@ void readInput(const char * fileName, image *img) {
     char buffRead[2];
     fscanf(input, "%c %c", &buffRead[0], &buffRead[1]);
     buff->type = buffRead[1] - '0';
-    fscanf(input, "%d %d", &buff->width, &buff->height);
-    fscanf(input, "%d", &buff->max_size);
+    fscanf(input, "%d %d\n%d\n", &buff->width, &buff->height, &buff->max_size);
+    //fscanf(input, "%d", &buff->max_size);
 
     if (buff->type == COLOR) {
+        
         buff->color_image = (rgb**) malloc (buff->height * sizeof(rgb*));
+
         for (int i = 0; i < buff->height; ++i)
             buff->color_image[i] = (rgb *) malloc (buff->width * sizeof(rgb));
+
         for (int i = 0; i < buff->height; ++i)
             fread(buff->color_image[i], sizeof(rgb), buff->width, input);
+
     } else if (buff->type == GRAYSCALE) {
+
         buff->gray_image = (gray**) malloc (buff->height * sizeof(gray*));
+        
         for (int i = 0; i < buff->height; ++i)
             buff->gray_image[i] = (gray *) malloc (buff->width * sizeof(gray));
+
         for (int i = 0; i < buff->height; ++i)
             fread(buff->gray_image[i], sizeof(gray), buff->width, input);
     }
@@ -50,7 +57,8 @@ void writeData(const char * fileName, image *img) {
         return;
     fprintf(output, "P%d\n%d %d\n%d\n", img->type, img->width, img->height, img->max_size);
     if (img->type == COLOR) {
-        for (int i = 0; i < img->height; ++i) {
+        for (int i = 0; i < img->height; ++i) { 
+            
             for (int j = 0; j < img->width; ++j) {
                 fwrite(&img->color_image[i][j].red, sizeof(unsigned char), 1, output);
                 fwrite(&img->color_image[i][j].green, sizeof(unsigned char), 1, output);
@@ -59,7 +67,8 @@ void writeData(const char * fileName, image *img) {
         }
     } else if (img->type == GRAYSCALE) {
         for (int i = 0; i < img->height; ++i)
-            fwrite(&img->gray_image[i], sizeof(gray), img->width, output);
+            for (int j = 0; j < img->width; ++j)
+                fwrite(&img->gray_image[i][j], sizeof(unsigned char), 1, output);
     }
 
     fclose(output);
@@ -114,15 +123,17 @@ void resize(image *in, image * out) {
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
                     for (int x = top_left_i; x < bottom_right_i; ++x) {
                         for (int y = top_left_j; y < bottom_right_j; ++y) {
-                            sumRed += in->color_image[x][y].red;
-                            sumBlue += in->color_image[x][y].blue;
-                            sumGreen += in->color_image[x][y].green;
+                            sumRed += (u_int) in->color_image[x][y].red;
+                            sumGreen += (u_int) in->color_image[x][y].green;
+                            sumBlue += (u_int) in->color_image[x][y].blue;
                             ++counter;
                         }
                     }
+
                     buff->color_image[i][j].red = (unsigned char) (sumRed / counter);
                     buff->color_image[i][j].green = (unsigned char) (sumGreen / counter);
                     buff->color_image[i][j].blue = (unsigned char) (sumBlue / counter);
+
                 } else if (in->type == GRAYSCALE) {
 
                     unsigned int totalSum = 0;
@@ -132,6 +143,7 @@ void resize(image *in, image * out) {
                             ++counter;
                         }
                     }
+
                     buff->gray_image[i][j].gray = (unsigned char) (totalSum / counter);
                 }
 
