@@ -34,5 +34,7 @@ void writeData(const char * fileName, image *img);
 
 void resize(image *in, image * out);
 
+void *threadFunction (void *var);
+
 
 #endif /* HOMEWORK_H */

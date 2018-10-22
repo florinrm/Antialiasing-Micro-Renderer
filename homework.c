@@ -8,6 +8,11 @@ u_int gaussianMatrix[3][3] = {{1, 2, 1}, {2, 4, 2}, {1, 2, 1}}, gaussianMean = 1
 pthread_t threads[8];
 int threads_id[8];
 
+pthread_barrier_t barrier;
+pthread_mutex_t mutex;
+
+imageConverter conv;
+
 
 void readInput(const char * fileName, image *img) {
     
@@ -22,7 +27,6 @@ void readInput(const char * fileName, image *img) {
     fscanf(input, "%c %c", &buffRead[0], &buffRead[1]);
     buff->type = buffRead[1] - '0';
     fscanf(input, "%d %d\n%d\n", &buff->width, &buff->height, &buff->max_size);
-    //fscanf(input, "%d", &buff->max_size);
 
     if (buff->type == COLOR) {
         
@@ -84,14 +88,13 @@ void writeData(const char * fileName, image *img) {
     }
 }
 
-/*
+
 void *threadFunction(void *var) {
-
-} */
-
-void resize(image *in, image * out) { 
+    imageConverter *convert = (imageConverter *)var;
+    image *in = convert->in;
+    image *out = convert->out; /*
     if (in == NULL)
-        return;
+        return; */
     image *buff = (image *) malloc (sizeof(image));
     buff->type = in->type;
     buff->height = in->height / resize_factor;
@@ -109,6 +112,7 @@ void resize(image *in, image * out) {
 
     for (int i = 0; i < buff->height; ++i) {
         for (int j = 0; j < buff->width; ++j) {
+            //pthread_barrier_wait(&barrier);
             if (resize_factor % 2 == 0) {
 
                 int top_left_i = resize_factor * i;
@@ -117,7 +121,6 @@ void resize(image *in, image * out) {
                 int bottom_right_j = resize_factor * (j + 1);
 
                 unsigned int counter = 0;
-                
                 if (in->type == COLOR) {
 
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
@@ -178,4 +181,22 @@ void resize(image *in, image * out) {
     }
     *out = *buff;
     free(buff);
+}
+
+void resize(image *in, image * out) {
+    imageConverter img;
+    img.in = in;
+    img.out = out;
+    pthread_barrier_init(&barrier, NULL, num_threads);
+
+    for (int i = 0; i < num_threads; ++i) {
+        threads_id[i] = i;
+    }
+    for (int i = 0; i < num_threads; ++i) {
+        pthread_create(&(threads[i]), NULL, threadFunction, (void *)&img);
+    }
+    for (int i = 0; i < num_threads; ++i)
+        pthread_join(threads[i], NULL);
+    pthread_barrier_destroy(&barrier);
+
 }
