@@ -1,5 +1,7 @@
 #include "homework.h"
 
+#define min(x, y) (((x) < (y)) ? (x) : (y))
+
 int num_threads;
 int resize_factor;
 
@@ -90,16 +92,13 @@ void writeData(const char * fileName, image *img) {
 
 
 void *threadFunction(void *var) {
-    imageConverter *convert = (imageConverter *)var;
-    image *in = convert->in;
-    image *out = convert->out; /*
-    if (in == NULL)
-        return; */
+    int tid = *(int *) var;
+    
     image *buff = (image *) malloc (sizeof(image));
-    buff->type = in->type;
-    buff->height = in->height / resize_factor;
-    buff->width = in->width / resize_factor;
-    buff->max_size = in->max_size;
+    buff->type = conv.in->type;
+    buff->height = conv.in->height / resize_factor;
+    buff->width = conv.in->width / resize_factor;
+    buff->max_size = conv.in->max_size;
     if (buff->type == COLOR) {
         buff->color_image = (rgb **) malloc (buff->height * sizeof(rgb *));
         for (int i = 0; i < buff->height; ++i)
@@ -109,6 +108,8 @@ void *threadFunction(void *var) {
         for (int i = 0; i < buff->height; ++i)
             buff->gray_image[i] = (gray *) malloc (buff->width * sizeof(gray));
     }
+
+    int start, end; // ramane sa sparg plm si bag mutex in dublul for 
 
     for (int i = 0; i < buff->height; ++i) {
         for (int j = 0; j < buff->width; ++j) {
@@ -121,14 +122,14 @@ void *threadFunction(void *var) {
                 int bottom_right_j = resize_factor * (j + 1);
 
                 unsigned int counter = 0;
-                if (in->type == COLOR) {
+                if (conv.in->type == COLOR) {
 
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
                     for (int x = top_left_i; x < bottom_right_i; ++x) {
                         for (int y = top_left_j; y < bottom_right_j; ++y) {
-                            sumRed += (u_int) in->color_image[x][y].red;
-                            sumGreen += (u_int) in->color_image[x][y].green;
-                            sumBlue += (u_int) in->color_image[x][y].blue;
+                            sumRed += (u_int) conv.in->color_image[x][y].red;
+                            sumGreen += (u_int) conv.in->color_image[x][y].green;
+                            sumBlue += (u_int) conv.in->color_image[x][y].blue;
                             ++counter;
                         }
                     }
@@ -137,12 +138,12 @@ void *threadFunction(void *var) {
                     buff->color_image[i][j].green = (unsigned char) (sumGreen / counter);
                     buff->color_image[i][j].blue = (unsigned char) (sumBlue / counter);
 
-                } else if (in->type == GRAYSCALE) {
+                } else if (conv.in->type == GRAYSCALE) {
 
                     unsigned int totalSum = 0;
                     for (int x = top_left_i; x < bottom_right_i; ++x) {
                         for (int y = top_left_j; y < bottom_right_j; ++y) {
-                            totalSum += in->gray_image[x][y].gray;
+                            totalSum += conv.in->gray_image[x][y].gray;
                             ++counter;
                         }
                     }
@@ -152,26 +153,26 @@ void *threadFunction(void *var) {
 
 
             } else if (resize_factor % 3 == 0) {
-                if (in->type == COLOR) {
+                if (conv.in->type == COLOR) {
 
                     unsigned int sumRed = 0, sumGreen = 0, sumBlue = 0;
                     for (int x = 0; x < 3; ++x) {
                         for (int y = 0; y < 3; ++y) {
-                            sumRed += in->color_image[x + 3 * i][y + 3 * j].red * gaussianMatrix[x][y];
-                            sumGreen += in->color_image[x + 3 * i][y + 3 * j].green * gaussianMatrix[x][y];
-                            sumBlue += in->color_image[x + 3 * i][y + 3 * j].blue * gaussianMatrix[x][y];
+                            sumRed += conv.in->color_image[x + 3 * i][y + 3 * j].red * gaussianMatrix[x][y];
+                            sumGreen += conv.in->color_image[x + 3 * i][y + 3 * j].green * gaussianMatrix[x][y];
+                            sumBlue += conv.in->color_image[x + 3 * i][y + 3 * j].blue * gaussianMatrix[x][y];
                         }
                     }
                     buff->color_image[i][j].red = (unsigned char) (sumRed / gaussianMean);
                     buff->color_image[i][j].green = (unsigned char) (sumGreen / gaussianMean);
                     buff->color_image[i][j].blue = (unsigned char) (sumBlue / gaussianMean);
 
-                } else if (in->type == GRAYSCALE) {
+                } else if (conv.in->type == GRAYSCALE) {
 
                     unsigned int totalSum = 0;
                     for (int x = 0; x < 3; ++x) {
                         for (int y = 0; y < 3; ++y) {
-                            totalSum += in->gray_image[x + 3 * i][y + 3 * j].gray * gaussianMatrix[x][y];
+                            totalSum += conv.in->gray_image[x + 3 * i][y + 3 * j].gray * gaussianMatrix[x][y];
                         }
                     }
                     buff->gray_image[i][j].gray = (unsigned char) (totalSum / gaussianMean);
@@ -179,24 +180,25 @@ void *threadFunction(void *var) {
             }
         }
     }
-    *out = *buff;
+    *conv.out = *buff;
     free(buff);
 }
 
 void resize(image *in, image * out) {
-    imageConverter img;
-    img.in = in;
-    img.out = out;
-    pthread_barrier_init(&barrier, NULL, num_threads);
-
+    conv.in = in;
+    conv.out = out;
+    //pthread_barrier_init(&barrier, NULL, num_threads);
+    pthread_mutex_init(&mutex, NULL);
     for (int i = 0; i < num_threads; ++i) {
         threads_id[i] = i;
     }
     for (int i = 0; i < num_threads; ++i) {
-        pthread_create(&(threads[i]), NULL, threadFunction, (void *)&img);
+        pthread_create(&(threads[i]), NULL, threadFunction, &threads_id[i]);
     }
     for (int i = 0; i < num_threads; ++i)
         pthread_join(threads[i], NULL);
-    pthread_barrier_destroy(&barrier);
+    //pthread_barrier_destroy(&barrier);
+    pthread_mutex_destroy(&mutex);
+    *out = *conv.out;
 
 }
