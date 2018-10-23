@@ -29,37 +29,38 @@ void initialize(image *im) {
 
 }
 
+image *feck;
+
+int calculateDistance(int i, int j) {
+    return abs((-1) * i + 2 * j) / sqrt(1 + 4);
+}
+
 void *threadFunction (void *var) {
-    image img = *(image *) var;
+    int tid = *(int *) var;
+   
 }
 
 void render(image *im) {
-    int resolution_scale = resolution / max;
-    for (int i = 0; i < max; ++i) {
-        for (int j = 0; j < max; ++j) {
-            double distance = abs((-1) * i + 2 * j) / sqrt(1 + 4); // (-1) ^ 2 + 2 ^ 2
-            if (distance <= 3) {
-                for (int x = 0; x < resolution_scale; ++x) {
-                    for (int y = 0; y < resolution_scale; ++y) {
-                        im->matrix[x + resolution_scale * i][y + resolution_scale * j] = BLACK;
-                    }
-                }
-            }
-        }
-    }
 
-    for (int i = 0; i < num_threads; ++i)
-        threads_id[i] = i;
-    
+	for (int i = 0; i < resolution; i++) {
+		for (int j = 0; j < resolution; j++) {
+            
+			float sum = (-1 * ((j + 0.5) * 100.0 / resolution)) 
+                        + (2 * ((resolution - 1 - (i + 0.5)) * 100.0 / resolution));
+			float distance = abs(sum) / sqrt(5);
+			if(abs((-1 * ((j + 0.5f) * 100.0f / (float)resolution)) + (2 * (((float)resolution - 1 - (i - 0.5f)) * 100.0F / resolution))) / sqrt(5) <= 3.0f) {
+				im->matrix[i][j] = 0;
+			}
+		}
+	} 
 }
 
 void writeData(const char * fileName, image *img) {
     FILE *output = fopen(fileName, "wb");
     fprintf(output, "P%d\n%d %d\n%d\n", img->type, img->width, img->height, img->max_value);
-
-    for (int i = img->width - 1; i >= 0; --i) {
+    for (int i = 0; i < img->width; ++i) {
         for (int j = 0; j < img->height; ++j) {
-            fwrite(&img->matrix[j][i], sizeof(pixel), 1, output);
+            fwrite(&img->matrix[i][j], sizeof(unsigned char), 1, output);
         }
     }
     for (int i = 0; i < img->height; ++i) {

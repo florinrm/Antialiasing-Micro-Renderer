@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <pthread.h>
+#include <math.h>
 
 #define MAXVAL 255
 #define BLACK 0
@@ -19,5 +20,11 @@ typedef struct {
 void initialize(image *im);
 void render(image *im);
 void writeData(const char * fileName, image *img);
+int calculateDistance (int x, int y);
+
+typedef struct {
+    image *img;
+    int tid;
+} transform;
 
 #endif /* HOMEWORK_H1 */
