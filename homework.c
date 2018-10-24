@@ -90,30 +90,17 @@ void writeData(const char * fileName, image *img) {
     }
 }
 
+image *buff;
 
 void *threadFunction(void *var) {
     int tid = *(int *) var;
     
-    image *buff = (image *) malloc (sizeof(image));
-    buff->type = conv.in->type;
-    buff->height = conv.in->height / resize_factor;
-    buff->width = conv.in->width / resize_factor;
-    buff->max_size = conv.in->max_size;
-    if (buff->type == COLOR) {
-        buff->color_image = (rgb **) malloc (buff->height * sizeof(rgb *));
-        for (int i = 0; i < buff->height; ++i)
-            buff->color_image[i] = (rgb *) malloc (buff->width * sizeof(rgb));
-    } else if (buff->type == GRAYSCALE) {
-        buff->gray_image = (gray **) malloc (buff->height * sizeof(gray *));
-        for (int i = 0; i < buff->height; ++i)
-            buff->gray_image[i] = (gray *) malloc (buff->width * sizeof(gray));
-    }
 
-    int start, end; // ramane sa sparg plm si bag mutex in dublul for 
+    int start = tid * ceil ((double) buff->width / (double) num_threads);
+    int end = min(buff->width, (tid + 1) * ceil((double) buff->width / (double) num_threads));
 
     for (int i = 0; i < buff->height; ++i) {
-        for (int j = 0; j < buff->width; ++j) {
-            //pthread_barrier_wait(&barrier);
+        for (int j = start; j < end; ++j) {
             if (resize_factor % 2 == 0) {
 
                 int top_left_i = resize_factor * i;
@@ -181,14 +168,26 @@ void *threadFunction(void *var) {
         }
     }
     *conv.out = *buff;
-    free(buff);
+    //free(buff);
 }
 
 void resize(image *in, image * out) {
+    buff = (image *) malloc (sizeof(image));
+    buff->type = in->type;
+    buff->height = in->height / resize_factor;
+    buff->width = in->width / resize_factor;
+    buff->max_size = in->max_size;
+    if (buff->type == COLOR) {
+        buff->color_image = (rgb **) malloc (buff->height * sizeof(rgb *));
+        for (int i = 0; i < buff->height; ++i)
+            buff->color_image[i] = (rgb *) malloc (buff->width * sizeof(rgb));
+    } else if (buff->type == GRAYSCALE) {
+        buff->gray_image = (gray **) malloc (buff->height * sizeof(gray *));
+        for (int i = 0; i < buff->height; ++i)
+            buff->gray_image[i] = (gray *) malloc (buff->width * sizeof(gray));
+    }
     conv.in = in;
     conv.out = out;
-    //pthread_barrier_init(&barrier, NULL, num_threads);
-    pthread_mutex_init(&mutex, NULL);
     for (int i = 0; i < num_threads; ++i) {
         threads_id[i] = i;
     }
@@ -197,8 +196,6 @@ void resize(image *in, image * out) {
     }
     for (int i = 0; i < num_threads; ++i)
         pthread_join(threads[i], NULL);
-    //pthread_barrier_destroy(&barrier);
-    pthread_mutex_destroy(&mutex);
     *out = *conv.out;
 
 }
