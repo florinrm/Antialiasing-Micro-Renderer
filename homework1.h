@@ -10,7 +10,7 @@
 #define MAXVAL 255
 #define BLACK 0
 
-typedef unsigned char pixel;
+typedef unsigned char pixel; // pixel from image
 
 typedef struct {
     int width, height, max_value, type;
@@ -21,10 +21,5 @@ void initialize(image *im);
 void render(image *im);
 void writeData(const char * fileName, image *img);
 int calculateDistance (int x, int y);
-
-typedef struct {
-    image *img;
-    int tid;
-} transform;
 
 #endif /* HOMEWORK_H1 */

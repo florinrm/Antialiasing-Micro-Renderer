@@ -1,5 +1,7 @@
 #include "homework1.h"
 
+#define min(x, y) (((x) < (y)) ? (x) : (y))
+
 int num_threads;
 int resolution;
 
@@ -9,12 +11,12 @@ pthread_t threads[8];
 int threads_id[8];
 
 void initialize(image *im) {
-    image *buff;
+    image *buff; // reference used in image initializing
     buff = (image *) malloc (sizeof(image));
     buff->width = resolution;
     buff->height = resolution;
     buff->max_value = MAXVAL;
-    buff->type = 5;
+    buff->type = 5; // B&W image
     buff->matrix = (pixel **) malloc (resolution * sizeof(pixel *));
 
     for (int i = 0; i < resolution; ++i) {
@@ -26,10 +28,9 @@ void initialize(image *im) {
     }
     *im = *buff;
     free(buff);
-
 }
 
-image *feck;
+image *feck; // global variable used for threading function in order
 
 int calculateDistance(int i, int j) {
     return abs((-1) * i + 2 * j) / sqrt(1 + 4);
@@ -37,22 +38,30 @@ int calculateDistance(int i, int j) {
 
 void *threadFunction (void *var) {
     int tid = *(int *) var;
-   
+
+    int start = tid * ceil((double) resolution / (double) num_threads);
+    int end = min(resolution, (tid + 1) * ceil((double) resolution / (double) num_threads));
+
+    for (int i = 0; i < resolution; i++) {
+		for (int j = start; j < end; j++) {
+            // calculating the distance between 2 coordonates
+			if (abs((-1 * ((j + 0.5f) * 100.0f / (float)resolution)) 
+                + (2 * (((float)resolution - 1 - (i - 0.5f)) * 100.0F / resolution))) / sqrt(5) <= 3.0f) {
+				feck->matrix[i][j] = 0;
+			}
+		}
+	}
 }
 
 void render(image *im) {
-
-	for (int i = 0; i < resolution; i++) {
-		for (int j = 0; j < resolution; j++) {
-            
-			float sum = (-1 * ((j + 0.5) * 100.0 / resolution)) 
-                        + (2 * ((resolution - 1 - (i + 0.5)) * 100.0 / resolution));
-			float distance = abs(sum) / sqrt(5);
-			if(abs((-1 * ((j + 0.5f) * 100.0f / (float)resolution)) + (2 * (((float)resolution - 1 - (i - 0.5f)) * 100.0F / resolution))) / sqrt(5) <= 3.0f) {
-				im->matrix[i][j] = 0;
-			}
-		}
-	} 
+    feck = im;
+    for (int i = 0; i < num_threads; ++i) {
+        threads_id[i] = i;
+    }
+    for (int i = 0; i < num_threads; ++i)
+        pthread_create(&(threads[i]), NULL, threadFunction, &(threads_id[i]));
+    for (int i = 0; i < num_threads; ++i)
+        pthread_join(threads[i], NULL);
 }
 
 void writeData(const char * fileName, image *img) {

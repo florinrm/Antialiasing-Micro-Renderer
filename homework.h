@@ -16,18 +16,18 @@ typedef struct {
 
 typedef struct {
     unsigned char gray;
-} gray;
+} gray; // grayscale image
 
 typedef struct {
     int width, height, max_size;
-    int type;
+    int type; // image type
     rgb **color_image; // 5 type
     gray **gray_image; // 6 type
 } image;
 
 typedef struct {
     image *in, *out;
-} imageConverter;
+} imageConverter; // structure used for image resize
 
 void readInput(const char * fileName, image *img);
 
